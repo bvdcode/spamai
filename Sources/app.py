@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from model_utils import predict, download_model
 import sys
 
 app = Flask(__name__)
+CORS(app)
 
 
 @app.route('/predict', methods=['POST'])
