@@ -8,31 +8,52 @@
       * {
         box-sizing: border-box;
       }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      :root {
+        --bg: linear-gradient(135deg, #0f1724 0%, #10131a 100%);
+        --card-bg: #0f1115;
+        --text: #e6eef3;
+        --muted: #9aa6b2;
+        --accent-start: #4f46e5; /* indigo-ish */
+        --accent-end: #6d28d9; /* purple-ish */
+        --input-bg: #0b0c0f;
+        --border: rgba(255, 255, 255, 0.06);
+        --success: rgba(34, 197, 94, 0.12);
+        --danger: rgba(239, 68, 68, 0.12);
+        --warning: rgba(245, 158, 11, 0.12);
+      }
+
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        display: flex;
+        background: var(--bg);
+        height: 100%;
+        display: flex; /* vertical centering via flexbox */
         align-items: center;
         justify-content: center;
         padding: 20px;
+        color: var(--text);
       }
       .card {
-        background: white;
+        background: var(--card-bg);
         width: 100%;
         max-width: 700px;
         border-radius: 14px;
         padding: 28px;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 20px 40px rgba(2, 6, 23, 0.6);
       }
       h1 {
         font-size: 2rem;
         margin-bottom: 8px;
-        color: #333;
+        color: #a7a7a7;
         text-align: center;
       }
       p.subtitle {
-        color: #666;
+        color: var(--muted);
         text-align: center;
         margin-bottom: 20px;
       }
@@ -41,7 +62,9 @@
         min-height: 150px;
         padding: 14px;
         border-radius: 10px;
-        border: 1px solid #e6e6e6;
+        border: 1px solid var(--border);
+        background: var(--input-bg);
+        color: var(--text);
         resize: vertical;
         font-size: 15px;
       }
@@ -50,7 +73,11 @@
         padding: 14px;
         border-radius: 10px;
         border: none;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(
+          135deg,
+          var(--accent-start) 0%,
+          var(--accent-end) 100%
+        );
         color: #fff;
         font-weight: 700;
         cursor: pointer;
@@ -66,7 +93,7 @@
         width: 36px;
         height: 36px;
         border: 4px solid #f0f0f0;
-        border-top-color: #667eea;
+        border-top-color: var(--accent-start);
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
@@ -84,19 +111,19 @@
         font-weight: 700;
       }
       .result.spam {
-        background: #ffefef;
-        color: #d42b2b;
-        border: 1px solid #ffdddd;
+        background: var(--danger);
+        color: #ffb3b3;
+        border: 1px solid rgba(239, 68, 68, 0.18);
       }
       .result.not-spam {
-        background: #efffef;
-        color: #12912e;
-        border: 1px solid #ddffdd;
+        background: var(--success);
+        color: #9ff3c1;
+        border: 1px solid rgba(34, 197, 94, 0.18);
       }
       .result.error {
-        background: #fff6e6;
-        color: #a66d00;
-        border: 1px solid #ffeab3;
+        background: var(--warning);
+        color: #ffd58b;
+        border: 1px solid rgba(245, 158, 11, 0.12);
       }
     </style>
   </head>
@@ -116,12 +143,18 @@
     </div>
 
     <script>
-      async function checkSpam() {
-        const text = document.getElementById("textInput").value.trim();
-        const btn = document.getElementById("checkBtn");
-        const loader = document.getElementById("loader");
-        const resultEl = document.getElementById("result");
+      const textInput = document.getElementById("textInput");
+      const btn = document.getElementById("checkBtn");
+      const loader = document.getElementById("loader");
+      const resultEl = document.getElementById("result");
 
+      let debounceTimer = null;
+      const debounceDelay = 1000; // 1 second
+      let lastSentText = "";
+      let currentController = null;
+
+      async function checkSpam(force = false) {
+        const text = textInput.value.trim();
         resultEl.style.display = "none";
 
         if (!text) {
@@ -131,6 +164,18 @@
           return;
         }
 
+        if (!force && text === lastSentText) {
+          // nothing changed since last successful request
+          return;
+        }
+
+        // abort previous request if any
+        if (currentController) {
+          currentController.abort();
+          currentController = null;
+        }
+
+        currentController = new AbortController();
         btn.disabled = true;
         loader.style.display = "block";
 
@@ -139,6 +184,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text }),
+            signal: currentController.signal,
           });
 
           if (!res.ok) {
@@ -146,6 +192,7 @@
           }
 
           const data = await res.json();
+          lastSentText = text; // update only after successful result
           resultEl.style.display = "block";
 
           if (data.isSpam) {
@@ -156,20 +203,55 @@
             resultEl.innerText = "✅ This does NOT look like spam.";
           }
         } catch (err) {
+          if (err.name === "AbortError") {
+            // another request started, ignore
+            return;
+          }
           resultEl.className = "result error";
           resultEl.style.display = "block";
           resultEl.innerText = "Error: " + err.message;
         } finally {
           btn.disabled = false;
           loader.style.display = "none";
+          currentController = null;
         }
       }
 
-      document
-        .getElementById("textInput")
-        .addEventListener("keydown", function (e) {
-          if (e.ctrlKey && e.key === "Enter") checkSpam();
-        });
+      // debounce on input
+      textInput.addEventListener("input", function (e) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          checkSpam();
+        }, debounceDelay);
+      });
+
+      // Enter sends (Shift+Enter for newline)
+      textInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (debounceTimer) {
+            clearTimeout(debounceTimer);
+            debounceTimer = null;
+          }
+          checkSpam(true);
+        } else if (e.ctrlKey && e.key === "Enter") {
+          e.preventDefault();
+          if (debounceTimer) {
+            clearTimeout(debounceTimer);
+            debounceTimer = null;
+          }
+          checkSpam(true);
+        }
+      });
+
+      // manual button click
+      btn.addEventListener("click", function (e) {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+        checkSpam(true);
+      });
     </script>
   </body>
 </html>
