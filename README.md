@@ -1,6 +1,6 @@
 # SpamAI
 
-Dockerized WebAPI for [RUSpam/spam_deberta_v4](https://huggingface.co/RUSpam/spam_deberta_v4)
+Dockerized WebAPI using model [RUSpam/spam_deberta_v4](https://huggingface.co/RUSpam/spam_deberta_v4)
 
 > Live URL: https://spamai.belov.us/predict
 
