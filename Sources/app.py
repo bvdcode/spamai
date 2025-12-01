@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from model_utils import predict, download_model
 import sys
@@ -13,6 +13,11 @@ def classify_text():
     text = data.get('text', '')
     result = predict(text)
     return jsonify({'isSpam': result})
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
 if __name__ == '__main__':

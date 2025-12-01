@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spam Detector</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .card {
+        background: white;
+        width: 100%;
+        max-width: 700px;
+        border-radius: 14px;
+        padding: 28px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+      }
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 8px;
+        color: #333;
+        text-align: center;
+      }
+      p.subtitle {
+        color: #666;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 150px;
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid #e6e6e6;
+        resize: vertical;
+        font-size: 15px;
+      }
+      button {
+        width: 100%;
+        padding: 14px;
+        border-radius: 10px;
+        border: none;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 14px;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .loader {
+        display: none;
+        margin: 16px auto;
+        width: 36px;
+        height: 36px;
+        border: 4px solid #f0f0f0;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .result {
+        display: none;
+        margin-top: 18px;
+        padding: 12px;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 700;
+      }
+      .result.spam {
+        background: #ffefef;
+        color: #d42b2b;
+        border: 1px solid #ffdddd;
+      }
+      .result.not-spam {
+        background: #efffef;
+        color: #12912e;
+        border: 1px solid #ddffdd;
+      }
+      .result.error {
+        background: #fff6e6;
+        color: #a66d00;
+        border: 1px solid #ffeab3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Spam Detector</h1>
+      <p class="subtitle">
+        Paste a message, click the button, and I’ll check if it's spam
+      </p>
+      <textarea
+        id="textInput"
+        placeholder="Type or paste text here..."
+      ></textarea>
+      <button id="checkBtn" onclick="checkSpam()">Check</button>
+      <div id="loader" class="loader"></div>
+      <div id="result" class="result"></div>
+    </div>
+
+    <script>
+      async function checkSpam() {
+        const text = document.getElementById("textInput").value.trim();
+        const btn = document.getElementById("checkBtn");
+        const loader = document.getElementById("loader");
+        const resultEl = document.getElementById("result");
+
+        resultEl.style.display = "none";
+
+        if (!text) {
+          resultEl.className = "result error";
+          resultEl.style.display = "block";
+          resultEl.innerText = "Please enter some text to check.";
+          return;
+        }
+
+        btn.disabled = true;
+        loader.style.display = "block";
+
+        try {
+          const res = await fetch("/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+
+          if (!res.ok) {
+            throw new Error("Network response was not ok");
+          }
+
+          const data = await res.json();
+          resultEl.style.display = "block";
+
+          if (data.isSpam) {
+            resultEl.className = "result spam";
+            resultEl.innerText = "🚫 This looks like SPAM.";
+          } else {
+            resultEl.className = "result not-spam";
+            resultEl.innerText = "✅ This does NOT look like spam.";
+          }
+        } catch (err) {
+          resultEl.className = "result error";
+          resultEl.style.display = "block";
+          resultEl.innerText = "Error: " + err.message;
+        } finally {
+          btn.disabled = false;
+          loader.style.display = "none";
+        }
+      }
+
+      document
+        .getElementById("textInput")
+        .addEventListener("keydown", function (e) {
+          if (e.ctrlKey && e.key === "Enter") checkSpam();
+        });
+    </script>
+  </body>
+</html>
