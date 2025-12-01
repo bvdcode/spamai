@@ -2,10 +2,10 @@
 
 Dockerized WebAPI using model [RUSpam/spam_deberta_v4](https://huggingface.co/RUSpam/spam_deberta_v4)
 
-> Live URL: https://spamai.belov.us/predict
+> Live URL: https://spamai.splidex.com/predict
 
 ```bash
-curl -X POST https://spamai.belov.us/predict -H "Content-Type: application/json" -d '{ "text": "Привет! Ищешь заработок в интернете?" }'
+curl -X POST https://spamai.splidex.com/predict -H "Content-Type: application/json" -d '{ "text": "Привет! Ищешь заработок в интернете?" }'
 ```
 
 
